@@ -15,5 +15,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.27.0"
+  "packageManager": "pnpm@10.27.0",
+  "devDependencies": {
+    "next": "16.1.1"
+  }
 }

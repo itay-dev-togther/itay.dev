@@ -12,8 +12,15 @@ function verifySignature(payload: string, signature: string | null): boolean {
     .update(payload)
     .digest('hex')
 
+  const expected = `sha256=${sig}`
+
+  // timingSafeEqual requires same length buffers
+  if (expected.length !== signature.length) {
+    return false
+  }
+
   return crypto.timingSafeEqual(
-    Buffer.from(`sha256=${sig}`),
+    Buffer.from(expected),
     Buffer.from(signature)
   )
 }
@@ -147,9 +154,3 @@ export async function POST(request: Request) {
   }
 }
 
-// Disable body parsing since we need raw body for signature verification
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}

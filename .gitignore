@@ -53,8 +53,11 @@ coverage/
 *.pem
 .vercel/
 
-# Claude Code
-.claude/
+# Claude Code (allow skills, exclude settings)
+.claude/*
+!.claude/skills/
 
 # MCP config (contains tokens)
 .mcp.json
+.vercel
+.env*.local
