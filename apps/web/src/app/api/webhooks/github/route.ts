@@ -3,6 +3,41 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
 const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET
+const WORKER_API_URL = process.env.WORKER_API_URL
+const WORKER_SECRET = process.env.WORKER_SECRET
+
+// Queue a code review job to the Cloudflare Worker
+async function queueCodeReview(
+  owner: string,
+  repo: string,
+  prNumber: number,
+  ticketId: string
+): Promise<void> {
+  if (!WORKER_API_URL || !WORKER_SECRET) {
+    console.log('Worker not configured, skipping AI code review')
+    return
+  }
+
+  try {
+    const response = await fetch(`${WORKER_API_URL}/queue/review`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WORKER_SECRET}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ owner, repo, prNumber, ticketId }),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error(`Failed to queue code review: ${response.status} - ${error}`)
+    } else {
+      console.log(`Queued code review for PR #${prNumber}`)
+    }
+  } catch (error) {
+    console.error('Error queuing code review:', error)
+  }
+}
 
 function verifySignature(payload: string, signature: string | null): boolean {
   if (!WEBHOOK_SECRET || !signature) return false
@@ -83,6 +118,13 @@ export async function POST(request: Request) {
     }
 
     const ticketId = ticket.id as string
+
+    // Queue AI code review for new or updated PRs
+    if (action === 'opened' || action === 'reopened' || action === 'synchronize') {
+      const [owner, repo] = repository.full_name.split('/')
+      // Fire and forget - don't await
+      queueCodeReview(owner, repo, pull_request.number, ticketId)
+    }
 
     if (action === 'opened' || action === 'reopened') {
       // Update ticket to in_review status
