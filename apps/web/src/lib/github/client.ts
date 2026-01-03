@@ -98,3 +98,30 @@ export async function getRepoInfo(owner: string, repo: string) {
   })
   return data
 }
+
+export interface CreateWebhookOptions {
+  owner: string
+  repo: string
+  webhookUrl: string
+  secret: string
+}
+
+export async function createWebhook({
+  owner,
+  repo,
+  webhookUrl,
+  secret,
+}: CreateWebhookOptions) {
+  const { data } = await octokit.repos.createWebhook({
+    owner,
+    repo,
+    config: {
+      url: webhookUrl,
+      content_type: 'json',
+      secret,
+    },
+    events: ['pull_request'],
+    active: true,
+  })
+  return data
+}

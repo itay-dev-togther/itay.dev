@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
-import { createRepoFromTemplate, GITHUB_OWNER } from '@/lib/github/client'
+import { createRepoFromTemplate, createWebhook, GITHUB_OWNER } from '@/lib/github/client'
 import { NextResponse } from 'next/server'
+
+const WEBHOOK_URL = process.env.NEXT_PUBLIC_APP_URL
+  ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/github`
+  : 'https://itay-dev.vercel.app/api/webhooks/github'
+const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET
 
 export async function POST(request: Request) {
   try {
@@ -62,6 +67,22 @@ export async function POST(request: Request) {
       description: project.description || undefined,
       isPrivate: false,
     })
+
+    // Configure webhook for PR events
+    if (WEBHOOK_SECRET) {
+      try {
+        await createWebhook({
+          owner: GITHUB_OWNER,
+          repo: repo.name,
+          webhookUrl: WEBHOOK_URL,
+          secret: WEBHOOK_SECRET,
+        })
+        console.log(`Webhook configured for ${GITHUB_OWNER}/${repo.name}`)
+      } catch (webhookError) {
+        console.error('Failed to create webhook:', webhookError)
+        // Don't fail the whole operation if webhook creation fails
+      }
+    }
 
     // Update project with repo info
     const { data: updatedProject, error: updateError } = await supabase
