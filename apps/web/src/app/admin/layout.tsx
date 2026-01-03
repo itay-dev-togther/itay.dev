@@ -51,11 +51,14 @@ export default async function AdminLayout({
           <Link href="/admin" style={navLinkStyle}>
             Dashboard
           </Link>
+          <Link href="/admin/templates" style={navLinkStyle}>
+            Templates
+          </Link>
           <Link href="/admin/projects" style={navLinkStyle}>
             Projects
           </Link>
-          <Link href="/admin/users" style={navLinkStyle}>
-            Users
+          <Link href="/admin/activity" style={navLinkStyle}>
+            Activity
           </Link>
         </nav>
 

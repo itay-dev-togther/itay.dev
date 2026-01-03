@@ -10,7 +10,9 @@
     "build:api": "pnpm -F api build",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -F web test",
+    "test:watch": "pnpm -F web test:watch"
   },
   "keywords": [],
   "author": "",

@@ -125,3 +125,29 @@ export async function createWebhook({
   })
   return data
 }
+
+export interface CreateRepoOptions {
+  name: string
+  description?: string
+  isPrivate?: boolean
+  autoInit?: boolean
+}
+
+export async function createRepo({
+  name,
+  description,
+  isPrivate = false,
+  autoInit = true,
+}: CreateRepoOptions) {
+  const { data } = await octokit.repos.createInOrg({
+    org: GITHUB_OWNER,
+    name,
+    description,
+    private: isPrivate,
+    auto_init: autoInit,
+    has_issues: true,
+    has_projects: false,
+    has_wiki: false,
+  })
+  return data
+}

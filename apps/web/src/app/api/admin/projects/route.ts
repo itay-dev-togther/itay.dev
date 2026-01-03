@@ -25,11 +25,11 @@ export async function POST(request: Request) {
 
     // Get request body
     const body = await request.json()
-    const { name, description, difficulty, tech_stack, status } = body
+    const { name, description, difficulty, tech_stack, status, template_id, tickets } = body
 
-    if (!name || !difficulty || !status) {
+    if (!name || !difficulty) {
       return NextResponse.json(
-        { error: 'name, difficulty, and status are required' },
+        { error: 'name and difficulty are required' },
         { status: 400 }
       )
     }
@@ -43,7 +43,8 @@ export async function POST(request: Request) {
         description: description || null,
         difficulty,
         tech_stack: tech_stack || [],
-        status,
+        status: status || 'draft',
+        template_id: template_id || null,
       })
       .select()
       .single()
@@ -51,6 +52,33 @@ export async function POST(request: Request) {
     if (createError) {
       console.error('Error creating project:', createError)
       return NextResponse.json({ error: 'Failed to create project' }, { status: 500 })
+    }
+
+    // If tickets are provided, create them
+    if (tickets && Array.isArray(tickets) && tickets.length > 0) {
+      const ticketsToInsert = tickets.map((ticket: {
+        title: string
+        description?: string
+        acceptance_criteria?: string
+        difficulty?: string
+      }) => ({
+        project_id: project.id,
+        title: ticket.title,
+        description: ticket.description || null,
+        acceptance_criteria: ticket.acceptance_criteria || null,
+        difficulty: ticket.difficulty || 'beginner',
+        status: 'available',
+      }))
+
+      const { error: ticketsError } = await supabase
+        .schema('itay')
+        .from('tickets')
+        .insert(ticketsToInsert)
+
+      if (ticketsError) {
+        console.error('Error creating tickets:', ticketsError)
+        // Don't fail the whole request, project was created
+      }
     }
 
     return NextResponse.json({ project })

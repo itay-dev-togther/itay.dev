@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/Toast'
 
 interface ClaimButtonProps {
   ticketId: string
@@ -9,6 +10,7 @@ interface ClaimButtonProps {
 
 export function ClaimButton({ ticketId }: ClaimButtonProps) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -31,10 +33,15 @@ export function ClaimButton({ ticketId }: ClaimButtonProps) {
         throw new Error(data.error || 'Failed to claim ticket')
       }
 
+      // Show success toast
+      showToast('Ticket claimed! Check your instructions below.', 'success')
+
       // Refresh the page to show updated status
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      const message = err instanceof Error ? err.message : 'Something went wrong'
+      setError(message)
+      showToast(message, 'error')
     } finally {
       setLoading(false)
     }

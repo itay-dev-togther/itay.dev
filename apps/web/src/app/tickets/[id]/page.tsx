@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Ticket, Project } from '@itay-dev/shared'
 import { ClaimButton } from '@/components/tickets/ClaimButton'
+import { AIHelpButton } from '@/components/tickets/AIHelpButton'
+import { ClaimedTicketInstructions } from '@/components/tickets/ClaimedTicketInstructions'
 
 interface TicketDetailPageProps {
   params: Promise<{ id: string }>
@@ -56,6 +58,7 @@ export default async function TicketDetailPage({ params }: TicketDetailPageProps
 
   const isAvailable = typedTicket.status === 'available'
   const isLoggedIn = !!user
+  const isOwner = user?.id === typedTicket.claimed_by
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fafafa' }}>
@@ -128,7 +131,17 @@ export default async function TicketDetailPage({ params }: TicketDetailPageProps
 
       {/* Content */}
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '2.5rem 2rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem' }}>
+        <div className="ticket-layout" style={{ display: 'grid', gap: '2rem' }}>
+          <style>{`
+            .ticket-layout {
+              grid-template-columns: 1fr 300px;
+            }
+            @media (max-width: 768px) {
+              .ticket-layout {
+                grid-template-columns: 1fr;
+              }
+            }
+          `}</style>
           {/* Main Content */}
           <div>
             {/* Description */}
@@ -222,6 +235,35 @@ export default async function TicketDetailPage({ params }: TicketDetailPageProps
 
           {/* Sidebar */}
           <div>
+            {/* AI Help */}
+            {isLoggedIn && (typedTicket.status === 'claimed' || typedTicket.status === 'in_review') && (
+              <div style={{
+                backgroundColor: '#fff',
+                borderRadius: '12px',
+                border: '1px solid #e5e7eb',
+                padding: '1.5rem',
+                marginBottom: '1.5rem',
+              }}>
+                <h3 style={{
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  color: '#111827',
+                  marginBottom: '0.75rem',
+                }}>
+                  Need help?
+                </h3>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  marginBottom: '1rem',
+                  lineHeight: 1.5,
+                }}>
+                  Ask AI about the requirements, get code examples, or debug issues.
+                </p>
+                <AIHelpButton ticketId={typedTicket.id} ticketTitle={typedTicket.title} />
+              </div>
+            )}
+
             {/* Claim Card */}
             <div style={{
               backgroundColor: '#fff',
@@ -272,33 +314,31 @@ export default async function TicketDetailPage({ params }: TicketDetailPageProps
                   )}
                 </>
               ) : typedTicket.status === 'claimed' || typedTicket.status === 'in_review' ? (
-                <>
-                  <h3 style={{
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    color: '#92400e',
-                    marginBottom: '0.5rem',
-                  }}>
-                    In Progress
-                  </h3>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#6b7280',
-                    lineHeight: 1.5,
-                  }}>
-                    This ticket is currently being worked on.
-                  </p>
-                  {typedTicket.branch_name && (
-                    <p style={{
-                      fontSize: '0.8rem',
-                      color: '#9ca3af',
-                      marginTop: '0.75rem',
-                      fontFamily: 'monospace',
+                typedTicket.branch_name && typedProject?.github_repo_url ? (
+                  <ClaimedTicketInstructions
+                    branchName={typedTicket.branch_name}
+                    repoUrl={typedProject.github_repo_url}
+                    isOwner={isOwner}
+                  />
+                ) : (
+                  <>
+                    <h3 style={{
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      color: '#92400e',
+                      marginBottom: '0.5rem',
                     }}>
-                      Branch: {typedTicket.branch_name}
+                      In Progress
+                    </h3>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      lineHeight: 1.5,
+                    }}>
+                      This ticket is currently being worked on.
                     </p>
-                  )}
-                </>
+                  </>
+                )
               ) : (
                 <>
                   <h3 style={{

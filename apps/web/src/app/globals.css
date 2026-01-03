@@ -40,3 +40,44 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .responsive-hide {
+    display: none !important;
+  }
+
+  .responsive-stack {
+    flex-direction: column !important;
+  }
+}
+
+/* Responsive typography */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.75rem !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* Mobile padding adjustments */
+@media (max-width: 640px) {
+  section {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 768px) {
+  button, a {
+    min-height: 44px;
+  }
+}

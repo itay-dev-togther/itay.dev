@@ -8,6 +8,7 @@ interface Ticket {
   id: string
   title: string
   description: string | null
+  acceptance_criteria: string | null
   difficulty: string
   status: string
   created_at: string
@@ -27,6 +28,8 @@ export default function ProjectTicketsPage() {
   const [showForm, setShowForm] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<Partial<Ticket>>({})
 
   useEffect(() => {
     fetchData()
@@ -88,6 +91,69 @@ export default function ProjectTicketsPage() {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setFormLoading(false)
+    }
+  }
+
+  const startEditing = (ticket: Ticket) => {
+    setEditingId(ticket.id)
+    setEditForm({
+      title: ticket.title,
+      description: ticket.description || '',
+      acceptance_criteria: ticket.acceptance_criteria || '',
+      difficulty: ticket.difficulty,
+    })
+    setError(null)
+  }
+
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditForm({})
+    setError(null)
+  }
+
+  const handleUpdate = async (ticketId: string) => {
+    setFormLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/admin/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || 'Failed to update ticket')
+      }
+
+      const { ticket } = await response.json()
+      setTickets(tickets.map(t => t.id === ticketId ? ticket : t))
+      setEditingId(null)
+      setEditForm({})
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
+  const handleDelete = async (ticketId: string) => {
+    if (!confirm('Are you sure you want to delete this ticket?')) return
+
+    try {
+      const response = await fetch(`/api/admin/tickets/${ticketId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || 'Failed to delete ticket')
+      }
+
+      setTickets(tickets.filter(t => t.id !== ticketId))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete')
     }
   }
 
@@ -211,39 +277,161 @@ export default function ProjectTicketsPage() {
         overflow: 'hidden',
       }}>
         {tickets.length > 0 ? (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f9fafb' }}>
-                <th style={thStyle}>Title</th>
-                <th style={thStyle}>Difficulty</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tickets.map((ticket) => (
-                <tr key={ticket.id} style={{ borderTop: '1px solid #e5e7eb' }}>
-                  <td style={tdStyle}>
-                    <Link
-                      href={`/tickets/${ticket.id}`}
-                      style={{ color: '#111827', textDecoration: 'none', fontWeight: 500 }}
-                    >
-                      {ticket.title}
-                    </Link>
-                  </td>
-                  <td style={tdStyle}>
-                    <DifficultyBadge difficulty={ticket.difficulty} />
-                  </td>
-                  <td style={tdStyle}>
-                    <StatusBadge status={ticket.status} />
-                  </td>
-                  <td style={{ ...tdStyle, color: '#6b7280', fontSize: '0.85rem' }}>
-                    {new Date(ticket.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div>
+            {tickets.map((ticket) => (
+              <div key={ticket.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                {editingId === ticket.id ? (
+                  // Edit Mode
+                  <div style={{ padding: '1.5rem' }}>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={labelStyle}>Title</label>
+                      <input
+                        type="text"
+                        value={editForm.title || ''}
+                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={labelStyle}>Description</label>
+                      <textarea
+                        value={editForm.description || ''}
+                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        rows={3}
+                        style={{ ...inputStyle, resize: 'vertical' }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={labelStyle}>Acceptance Criteria</label>
+                      <textarea
+                        value={editForm.acceptance_criteria || ''}
+                        onChange={(e) => setEditForm({ ...editForm, acceptance_criteria: e.target.value })}
+                        rows={4}
+                        style={{ ...inputStyle, resize: 'vertical' }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={labelStyle}>Difficulty</label>
+                      <select
+                        value={editForm.difficulty || 'beginner'}
+                        onChange={(e) => setEditForm({ ...editForm, difficulty: e.target.value })}
+                        style={inputStyle}
+                      >
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                      </select>
+                    </div>
+
+                    {error && (
+                      <div style={{
+                        padding: '0.75rem',
+                        backgroundColor: '#fef2f2',
+                        color: '#dc2626',
+                        borderRadius: '8px',
+                        marginBottom: '1rem',
+                        fontSize: '0.9rem',
+                      }}>
+                        {error}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => handleUpdate(ticket.id)}
+                        disabled={formLoading}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: formLoading ? '#a5b4fc' : '#22c55e',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontWeight: 600,
+                          cursor: formLoading ? 'not-allowed' : 'pointer',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {formLoading ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#f3f4f6',
+                          color: '#374151',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // View Mode
+                  <div style={{
+                    padding: '1rem 1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                        <Link
+                          href={`/tickets/${ticket.id}`}
+                          style={{ color: '#111827', textDecoration: 'none', fontWeight: 600, fontSize: '0.95rem' }}
+                        >
+                          {ticket.title}
+                        </Link>
+                        <DifficultyBadge difficulty={ticket.difficulty} />
+                        <StatusBadge status={ticket.status} />
+                      </div>
+                      <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>
+                        Created {new Date(ticket.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => startEditing(ticket)}
+                        style={{
+                          padding: '0.4rem 0.75rem',
+                          backgroundColor: '#f3f4f6',
+                          color: '#374151',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Edit
+                      </button>
+                      {ticket.status === 'available' && (
+                        <button
+                          onClick={() => handleDelete(ticket.id)}
+                          style={{
+                            padding: '0.4rem 0.75rem',
+                            backgroundColor: '#fef2f2',
+                            color: '#dc2626',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
           <div style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
             No tickets yet. Create one above!
@@ -265,8 +453,8 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span style={{
-      padding: '0.25rem 0.6rem',
-      fontSize: '0.75rem',
+      padding: '0.2rem 0.5rem',
+      fontSize: '0.7rem',
       fontWeight: 600,
       backgroundColor: style.bg,
       color: style.color,
@@ -288,8 +476,8 @@ function DifficultyBadge({ difficulty }: { difficulty: string }) {
 
   return (
     <span style={{
-      padding: '0.25rem 0.6rem',
-      fontSize: '0.75rem',
+      padding: '0.2rem 0.5rem',
+      fontSize: '0.7rem',
       fontWeight: 600,
       backgroundColor: style.bg,
       color: style.color,
@@ -303,31 +491,17 @@ function DifficultyBadge({ difficulty }: { difficulty: string }) {
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: '0.9rem',
+  fontSize: '0.85rem',
   fontWeight: 500,
   color: '#374151',
-  marginBottom: '0.5rem',
+  marginBottom: '0.4rem',
 }
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '0.6rem 0.75rem',
-  fontSize: '0.95rem',
+  fontSize: '0.9rem',
   border: '1px solid #d1d5db',
   borderRadius: '8px',
   backgroundColor: '#fff',
-}
-
-const thStyle: React.CSSProperties = {
-  padding: '0.75rem 1rem',
-  textAlign: 'left',
-  fontSize: '0.8rem',
-  fontWeight: 600,
-  color: '#6b7280',
-  textTransform: 'uppercase',
-}
-
-const tdStyle: React.CSSProperties = {
-  padding: '0.75rem 1rem',
-  fontSize: '0.9rem',
 }
