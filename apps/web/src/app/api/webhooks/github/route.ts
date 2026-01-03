@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { serviceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
@@ -66,19 +66,11 @@ export async function POST(request: Request) {
     const data: PullRequestEvent = JSON.parse(payload)
     const { action, pull_request, repository } = data
 
-    const supabase = await createClient()
-
     // Find ticket by branch name
     const branchName = pull_request.head.ref
-    const { data: ticket, error: ticketError } = await supabase
-      .schema('itay')
-      .from('tickets')
-      .select('*, projects(*)')
-      .eq('branch_name', branchName)
-      .single()
+    const { data: ticket, error: ticketError } = await serviceClient.getTicketByBranch(branchName)
 
     if (ticketError || !ticket) {
-      // Not a tracked branch, ignore
       console.log(`No ticket found for branch: ${branchName}`)
       return NextResponse.json({ message: 'Branch not tracked' }, { status: 200 })
     }
@@ -90,57 +82,53 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Repo mismatch' }, { status: 200 })
     }
 
+    const ticketId = ticket.id as string
+
     if (action === 'opened' || action === 'reopened') {
       // Update ticket to in_review status
-      await supabase
-        .schema('itay')
-        .from('tickets')
-        .update({
-          status: 'in_review',
-          pr_url: pull_request.html_url,
-          pr_number: pull_request.number,
-        })
-        .eq('id', ticket.id)
+      const { error } = await serviceClient.updateTicket(ticketId, {
+        status: 'in_review',
+        pr_url: pull_request.html_url,
+        pr_number: pull_request.number,
+      })
 
-      console.log(`Ticket ${ticket.id} updated to in_review`)
+      if (error) {
+        console.error('Error updating ticket:', error)
+      } else {
+        console.log(`Ticket ${ticketId} updated to in_review`)
+      }
     }
 
     if (action === 'closed' && pull_request.merged) {
       // Update ticket to done status
-      await supabase
-        .schema('itay')
-        .from('tickets')
-        .update({
-          status: 'done',
-          pr_url: pull_request.html_url,
-          pr_number: pull_request.number,
-        })
-        .eq('id', ticket.id)
+      await serviceClient.updateTicket(ticketId, {
+        status: 'done',
+        pr_url: pull_request.html_url,
+        pr_number: pull_request.number,
+      })
 
       // Create contribution record
-      if (ticket.claimed_by) {
-        const { error: contributionError } = await supabase
-          .schema('itay')
-          .from('contributions')
-          .insert({
-            user_id: ticket.claimed_by,
-            ticket_id: ticket.id,
-            project_id: ticket.project_id,
-            pr_url: pull_request.html_url,
-            pr_number: pull_request.number,
-            merged_at: pull_request.merged_at,
-            lines_added: pull_request.additions,
-            lines_removed: pull_request.deletions,
-          })
+      const claimedBy = ticket.claimed_by as string | null
+      if (claimedBy) {
+        const { error: contributionError } = await serviceClient.createContribution({
+          user_id: claimedBy,
+          ticket_id: ticketId,
+          project_id: ticket.project_id,
+          pr_url: pull_request.html_url,
+          pr_number: pull_request.number,
+          merged_at: pull_request.merged_at,
+          lines_added: pull_request.additions,
+          lines_removed: pull_request.deletions,
+        })
 
         if (contributionError) {
           console.error('Error creating contribution:', contributionError)
         } else {
-          console.log(`Contribution created for ticket ${ticket.id}`)
+          console.log(`Contribution created for ticket ${ticketId}`)
         }
       }
 
-      console.log(`Ticket ${ticket.id} marked as done`)
+      console.log(`Ticket ${ticketId} marked as done`)
     }
 
     return NextResponse.json({ success: true })
@@ -153,4 +141,3 @@ export async function POST(request: Request) {
     )
   }
 }
-
