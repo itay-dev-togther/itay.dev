@@ -3,39 +3,44 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
 const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET
-const WORKER_API_URL = process.env.WORKER_API_URL
-const WORKER_SECRET = process.env.WORKER_SECRET
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const EDGE_FUNCTION_SECRET = process.env.EDGE_FUNCTION_SECRET
 
-// Queue a code review job to the Cloudflare Worker
-async function queueCodeReview(
+// Trigger code review via Supabase Edge Function
+async function triggerCodeReview(
   owner: string,
   repo: string,
   prNumber: number,
   ticketId: string
 ): Promise<void> {
-  if (!WORKER_API_URL || !WORKER_SECRET) {
-    console.log('Worker not configured, skipping AI code review')
+  if (!SUPABASE_URL) {
+    console.log('Supabase not configured, skipping AI code review')
     return
   }
 
   try {
-    const response = await fetch(`${WORKER_API_URL}/queue/review`, {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (EDGE_FUNCTION_SECRET) {
+      headers['Authorization'] = `Bearer ${EDGE_FUNCTION_SECRET}`
+    }
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/code-review`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${WORKER_SECRET}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ owner, repo, prNumber, ticketId }),
     })
 
     if (!response.ok) {
       const error = await response.text()
-      console.error(`Failed to queue code review: ${response.status} - ${error}`)
+      console.error(`Failed to trigger code review: ${response.status} - ${error}`)
     } else {
-      console.log(`Queued code review for PR #${prNumber}`)
+      console.log(`Triggered code review for PR #${prNumber}`)
     }
   } catch (error) {
-    console.error('Error queuing code review:', error)
+    console.error('Error triggering code review:', error)
   }
 }
 
@@ -119,11 +124,11 @@ export async function POST(request: Request) {
 
     const ticketId = ticket.id as string
 
-    // Queue AI code review for new or updated PRs
+    // Trigger AI code review for new or updated PRs
     if (action === 'opened' || action === 'reopened' || action === 'synchronize') {
       const [owner, repo] = repository.full_name.split('/')
       // Fire and forget - don't await
-      queueCodeReview(owner, repo, pull_request.number, ticketId)
+      triggerCodeReview(owner, repo, pull_request.number, ticketId)
     }
 
     if (action === 'opened' || action === 'reopened') {
