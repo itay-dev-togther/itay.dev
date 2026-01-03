@@ -1,0 +1,19 @@
+{
+  "name": "itay-dev",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Itay.dev - Community collaboration platform",
+  "scripts": {
+    "dev:web": "pnpm -F web dev",
+    "dev:api": "pnpm -F api dev",
+    "build:web": "pnpm -F web build",
+    "build:api": "pnpm -F api build",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.27.0"
+}
