@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { StatCard } from '@/components/home/StatCard'
+import { StepCard } from '@/components/home/StepCard'
+import { FeatureCard } from '@/components/home/FeatureCard'
 
 // Force dynamic rendering - data should be fresh on each request
 export const dynamic = 'force-dynamic'
@@ -95,7 +98,6 @@ export default async function Home() {
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
               href="/projects"
-              className="hero-btn-primary"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -108,7 +110,6 @@ export default async function Home() {
                 borderRadius: '12px',
                 textDecoration: 'none',
                 boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                transition: 'all 0.2s',
               }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -119,7 +120,6 @@ export default async function Home() {
             </Link>
             <Link
               href="/login"
-              className="hero-btn-secondary"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -133,7 +133,6 @@ export default async function Home() {
                 textDecoration: 'none',
                 border: '2px solid rgba(255,255,255,0.3)',
                 backdropFilter: 'blur(4px)',
-                transition: 'all 0.2s',
               }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -362,7 +361,6 @@ export default async function Home() {
           </p>
           <Link
             href="/projects"
-            className="cta-btn"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -375,7 +373,6 @@ export default async function Home() {
               borderRadius: '12px',
               textDecoration: 'none',
               boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
-              transition: 'all 0.2s',
             }}
           >
             View Projects
@@ -440,216 +437,7 @@ export default async function Home() {
             grid-template-columns: 1fr;
           }
         }
-
-        .hero-btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-        }
-
-        .hero-btn-secondary:hover {
-          background-color: rgba(255,255,255,0.25);
-          border-color: rgba(255,255,255,0.5);
-        }
-
-        .cta-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-        }
       `}</style>
-    </div>
-  )
-}
-
-function StatCard({ number, label, icon }: { number: number; label: string; icon: React.ReactNode }) {
-  return (
-    <div style={{
-      padding: '1.75rem',
-      backgroundColor: '#fff',
-      borderRadius: '16px',
-      boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1.25rem',
-      transition: 'transform 0.2s, box-shadow 0.2s',
-    }}
-    onMouseOver={(e) => {
-      e.currentTarget.style.transform = 'translateY(-2px)'
-      e.currentTarget.style.boxShadow = '0 14px 50px rgba(0,0,0,0.12)'
-    }}
-    onMouseOut={(e) => {
-      e.currentTarget.style.transform = 'translateY(0)'
-      e.currentTarget.style.boxShadow = '0 10px 40px rgba(0,0,0,0.08)'
-    }}
-    >
-      <div style={{
-        width: 52,
-        height: 52,
-        borderRadius: '12px',
-        backgroundColor: '#f5f3ff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div>
-        <div style={{
-          fontSize: '2rem',
-          fontWeight: 700,
-          color: '#111827',
-          lineHeight: 1,
-          marginBottom: '0.25rem',
-        }}>
-          {number}
-        </div>
-        <div style={{ color: '#6b7280', fontSize: '0.9rem', fontWeight: 500 }}>
-          {label}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function StepCard({
-  icon,
-  title,
-  description,
-  step
-}: {
-  icon: React.ReactNode
-  title: string
-  description: string
-  step: number
-}) {
-  return (
-    <div style={{
-      padding: '2rem',
-      backgroundColor: '#fff',
-      borderRadius: '20px',
-      border: '1px solid #e5e7eb',
-      position: 'relative',
-      transition: 'transform 0.2s, box-shadow 0.2s',
-    }}
-    onMouseOver={(e) => {
-      e.currentTarget.style.transform = 'translateY(-4px)'
-      e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.08)'
-    }}
-    onMouseOut={(e) => {
-      e.currentTarget.style.transform = 'translateY(0)'
-      e.currentTarget.style.boxShadow = 'none'
-    }}
-    >
-      {/* Step number badge */}
-      <div style={{
-        position: 'absolute',
-        top: '-12px',
-        left: '20px',
-        width: 28,
-        height: 28,
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '0.8rem',
-        fontWeight: 700,
-        boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)',
-      }}>
-        {step}
-      </div>
-
-      <div style={{
-        width: 56,
-        height: 56,
-        borderRadius: '14px',
-        background: 'linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%)',
-        color: '#6366f1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: '1.25rem',
-        marginTop: '0.5rem',
-      }}>
-        {icon}
-      </div>
-      <h3 style={{
-        fontSize: '1.25rem',
-        fontWeight: 600,
-        color: '#111827',
-        marginBottom: '0.75rem',
-      }}>
-        {title}
-      </h3>
-      <p style={{
-        color: '#6b7280',
-        lineHeight: 1.6,
-        fontSize: '0.95rem',
-      }}>
-        {description}
-      </p>
-    </div>
-  )
-}
-
-function FeatureCard({
-  icon,
-  title,
-  description
-}: {
-  icon: React.ReactNode
-  title: string
-  description: string
-}) {
-  return (
-    <div style={{
-      padding: '1.75rem',
-      backgroundColor: '#fff',
-      borderRadius: '16px',
-      border: '1px solid #e5e7eb',
-      display: 'flex',
-      gap: '1rem',
-      transition: 'transform 0.2s, box-shadow 0.2s',
-    }}
-    onMouseOver={(e) => {
-      e.currentTarget.style.transform = 'translateY(-2px)'
-      e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.06)'
-    }}
-    onMouseOut={(e) => {
-      e.currentTarget.style.transform = 'translateY(0)'
-      e.currentTarget.style.boxShadow = 'none'
-    }}
-    >
-      <div style={{
-        width: 48,
-        height: 48,
-        borderRadius: '12px',
-        backgroundColor: '#f5f3ff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div>
-        <h3 style={{
-          fontSize: '1.1rem',
-          fontWeight: 600,
-          color: '#111827',
-          marginBottom: '0.5rem',
-        }}>
-          {title}
-        </h3>
-        <p style={{
-          color: '#6b7280',
-          lineHeight: 1.6,
-          fontSize: '0.9rem',
-        }}>
-          {description}
-        </p>
-      </div>
     </div>
   )
 }
