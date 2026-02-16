@@ -73,6 +73,16 @@ export async function POST(request: Request) {
           { status: 400 }
         )
       }
+
+      if (!itayUser.github_username) {
+        return NextResponse.json(
+          {
+            error: 'Please set your GitHub username in your profile before claiming a ticket.',
+            redirect: '/profile',
+          },
+          { status: 400 }
+        )
+      }
     }
 
     // Generate branch name

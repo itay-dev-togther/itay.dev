@@ -5,6 +5,7 @@ import type { Ticket, Project } from '@itay-dev/shared'
 import { ClaimButton } from '@/components/tickets/ClaimButton'
 import { AIHelpButton } from '@/components/tickets/AIHelpButton'
 import { ClaimedTicketInstructions } from '@/components/tickets/ClaimedTicketInstructions'
+import { CommentSection } from '@/components/tickets/CommentSection'
 
 interface TicketDetailPageProps {
   params: Promise<{ id: string }>
@@ -205,6 +206,7 @@ export default async function TicketDetailPage({ params }: TicketDetailPageProps
                 borderRadius: '12px',
                 border: '1px solid #bbf7d0',
                 padding: '1.5rem',
+                marginBottom: '1.5rem',
               }}>
                 <h2 style={{
                   fontSize: '1rem',
@@ -231,6 +233,12 @@ export default async function TicketDetailPage({ params }: TicketDetailPageProps
                 </a>
               </div>
             )}
+
+            {/* Comments */}
+            <CommentSection
+              ticketId={typedTicket.id}
+              currentUserId={user?.id || null}
+            />
           </div>
 
           {/* Sidebar */}
@@ -319,6 +327,8 @@ export default async function TicketDetailPage({ params }: TicketDetailPageProps
                     branchName={typedTicket.branch_name}
                     repoUrl={typedProject.github_repo_url}
                     isOwner={isOwner}
+                    ticketId={typedTicket.id}
+                    ticketStatus={typedTicket.status}
                   />
                 ) : (
                   <>

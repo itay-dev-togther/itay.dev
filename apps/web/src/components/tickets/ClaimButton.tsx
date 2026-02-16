@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
+import Link from 'next/link'
 
 interface ClaimButtonProps {
   ticketId: string
@@ -13,10 +14,12 @@ export function ClaimButton({ ticketId }: ClaimButtonProps) {
   const { showToast } = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [needsGithub, setNeedsGithub] = useState(false)
 
   const handleClaim = async () => {
     setLoading(true)
     setError(null)
+    setNeedsGithub(false)
 
     try {
       const response = await fetch('/api/tickets/claim', {
@@ -30,6 +33,10 @@ export function ClaimButton({ ticketId }: ClaimButtonProps) {
       const data = await response.json()
 
       if (!response.ok) {
+        if (data.redirect) {
+          setNeedsGithub(true)
+          return
+        }
         throw new Error(data.error || 'Failed to claim ticket')
       }
 
@@ -73,6 +80,22 @@ export function ClaimButton({ ticketId }: ClaimButtonProps) {
       >
         {loading ? 'Claiming...' : 'Claim This Ticket'}
       </button>
+      {needsGithub && (
+        <div style={{
+          marginTop: '0.75rem',
+          padding: '0.75rem 1rem',
+          backgroundColor: '#fffbeb',
+          border: '1px solid #fde68a',
+          borderRadius: '8px',
+          fontSize: '0.85rem',
+          color: '#92400e',
+        }}>
+          Please set your GitHub username first.{' '}
+          <Link href="/profile" style={{ color: '#6366f1', fontWeight: 600, textDecoration: 'underline' }}>
+            Go to Profile Settings
+          </Link>
+        </div>
+      )}
       {error && (
         <p style={{
           marginTop: '0.75rem',

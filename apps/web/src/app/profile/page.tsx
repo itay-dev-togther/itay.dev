@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { GitHubUsernameField } from '@/components/profile/GitHubUsernameField'
 
 interface Contribution {
   id: string
@@ -137,6 +138,7 @@ export default async function ProfilePage() {
                   {profile?.role || 'contributor'}
                 </span>
               </div>
+              <GitHubUsernameField initialUsername={profile?.github_username || null} />
             </div>
           </div>
         </div>

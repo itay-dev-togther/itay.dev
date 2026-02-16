@@ -57,6 +57,19 @@ export interface Contribution {
   created_at: string
 }
 
+export interface TicketComment {
+  id: string
+  ticket_id: string
+  user_id: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TicketCommentWithUser extends TicketComment {
+  user?: Pick<User, 'id' | 'name' | 'avatar_url' | 'github_username'>
+}
+
 // ============ Extended Types (with relations) ============
 
 export interface TicketWithProject extends Ticket {

@@ -1,23 +1,60 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { ProjectCard } from '@/components/projects/ProjectCard'
+import { ProjectFilters } from '@/components/projects/ProjectFilters'
+import { SearchBar } from '@/components/projects/SearchBar'
+import { Pagination } from '@/components/ui/Pagination'
 import type { Project } from '@itay-dev/shared'
 
-export default async function ProjectsPage() {
+const PROJECTS_PER_PAGE = 9
+
+interface ProjectsPageProps {
+  searchParams: Promise<{ difficulty?: string; search?: string; page?: string }>
+}
+
+export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
+  const { difficulty, search, page } = await searchParams
   const supabase = await createClient()
 
-  const { data: projects, error } = await supabase
+  let query = supabase
     .schema('itay')
     .from('projects')
-    .select('*')
+    .select('*', { count: 'exact' })
     .in('status', ['active', 'completed'])
     .order('created_at', { ascending: false })
+
+  if (difficulty && ['beginner', 'intermediate', 'advanced'].includes(difficulty)) {
+    query = query.eq('difficulty', difficulty)
+  }
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+  }
+
+  const pageNum = Math.max(1, parseInt(page || '1'))
+  const from = (pageNum - 1) * PROJECTS_PER_PAGE
+  const to = from + PROJECTS_PER_PAGE - 1
+  query = query.range(from, to)
+
+  const { data: projects, error, count } = await query
+  const totalPages = Math.ceil((count || 0) / PROJECTS_PER_PAGE)
 
   if (error) {
     console.error('Error fetching projects:', error)
   }
 
-  const activeCount = projects?.filter(p => p.status === 'active').length || 0
-  const completedCount = projects?.filter(p => p.status === 'completed').length || 0
+  // For stats, count all active/completed (unfiltered)
+  const { count: totalActive } = await supabase
+    .schema('itay')
+    .from('projects')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'active')
+
+  const { count: totalCompleted } = await supabase
+    .schema('itay')
+    .from('projects')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'completed')
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fafafa' }}>
@@ -50,15 +87,15 @@ export default async function ProjectsPage() {
           {/* Stats */}
           <div style={{ display: 'flex', gap: '2rem' }}>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 700 }}>{activeCount}</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700 }}>{totalActive || 0}</div>
               <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>Active Projects</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 700 }}>{completedCount}</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700 }}>{totalCompleted || 0}</div>
               <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>Completed</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 700 }}>∞</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700 }}>{String.fromCharCode(8734)}</div>
               <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>Learning Opportunities</div>
             </div>
           </div>
@@ -67,72 +104,50 @@ export default async function ProjectsPage() {
 
       {/* Projects Grid */}
       <section style={{ maxWidth: 1200, margin: '0 auto', padding: '3rem 2rem' }}>
-        {/* Filter tabs (visual only for now) */}
+        {/* Search + Filter bar */}
         <div style={{
           display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           gap: '1rem',
-          marginBottom: '2rem',
-          borderBottom: '1px solid #e5e7eb',
-          paddingBottom: '1rem',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap',
         }}>
-          <button style={{
-            padding: '0.5rem 1rem',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            color: '#6366f1',
-            backgroundColor: '#eef2ff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-          }}>
-            All Projects
-          </button>
-          <button style={{
-            padding: '0.5rem 1rem',
-            fontSize: '0.9rem',
-            fontWeight: 500,
-            color: '#6b7280',
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-          }}>
-            Beginner
-          </button>
-          <button style={{
-            padding: '0.5rem 1rem',
-            fontSize: '0.9rem',
-            fontWeight: 500,
-            color: '#6b7280',
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-          }}>
-            Intermediate
-          </button>
-          <button style={{
-            padding: '0.5rem 1rem',
-            fontSize: '0.9rem',
-            fontWeight: 500,
-            color: '#6b7280',
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-          }}>
-            Advanced
-          </button>
+          <Suspense fallback={<div style={{ height: '2.5rem' }} />}>
+            <ProjectFilters />
+          </Suspense>
+          <Suspense fallback={<div style={{ width: 400, height: '2.5rem' }} />}>
+            <SearchBar />
+          </Suspense>
         </div>
+
+        {search && (
+          <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+            {count || 0} result{count !== 1 ? 's' : ''} for &ldquo;{search}&rdquo;
+          </p>
+        )}
 
         {/* Grid */}
         {projects && projects.length > 0 ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: '1.5rem',
-          }}>
-            {projects.map((project) => (
-              <ProjectCard key={project.id} project={project as Project} />
-            ))}
-          </div>
+          <>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+              gap: '1.5rem',
+            }}>
+              {projects.map((project) => (
+                <ProjectCard key={project.id} project={project as Project} />
+              ))}
+            </div>
+
+            <Suspense fallback={null}>
+              <Pagination
+                currentPage={pageNum}
+                totalPages={totalPages}
+                basePath="/projects"
+              />
+            </Suspense>
+          </>
         ) : (
           <div style={{
             textAlign: 'center',
@@ -140,9 +155,9 @@ export default async function ProjectsPage() {
             color: '#6b7280',
           }}>
             <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>
-              No projects available yet.
+              {search ? 'No projects match your search.' : 'No projects available yet.'}
             </p>
-            <p>Check back soon for new opportunities!</p>
+            <p>{search ? 'Try a different search term.' : 'Check back soon for new opportunities!'}</p>
           </div>
         )}
       </section>

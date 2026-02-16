@@ -1,21 +1,27 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
 
 interface ClaimedTicketInstructionsProps {
   branchName: string
   repoUrl: string // e.g., "https://github.com/org/repo"
   isOwner: boolean // whether current user is the assignee
+  ticketId: string
+  ticketStatus: string
 }
 
 export function ClaimedTicketInstructions({
   branchName,
   repoUrl,
-  isOwner
+  isOwner,
+  ticketId,
+  ticketStatus,
 }: ClaimedTicketInstructionsProps) {
   const { showToast } = useToast()
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
+  const [releasing, setReleasing] = useState(false)
 
   // Convert GitHub URL to various formats
   const repoPath = repoUrl.replace('https://github.com/', '')
@@ -350,6 +356,115 @@ export function ClaimedTicketInstructions({
           </div>
         </div>
       </details>
+
+      {/* Release Ticket */}
+      {ticketStatus === 'claimed' && (
+        <ReleaseButton ticketId={ticketId} releasing={releasing} setReleasing={setReleasing} showToast={showToast} />
+      )}
+    </div>
+  )
+}
+
+function ReleaseButton({
+  ticketId,
+  releasing,
+  setReleasing,
+  showToast,
+}: {
+  ticketId: string
+  releasing: boolean
+  setReleasing: (v: boolean) => void
+  showToast: (msg: string, type: 'success' | 'error') => void
+}) {
+  const router = useRouter()
+  const [confirming, setConfirming] = useState(false)
+
+  const handleRelease = async () => {
+    setReleasing(true)
+    try {
+      const res = await fetch('/api/tickets/unclaim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: ticketId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to release')
+      showToast('Ticket released successfully', 'success')
+      router.refresh()
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to release', 'error')
+    } finally {
+      setReleasing(false)
+      setConfirming(false)
+    }
+  }
+
+  if (!confirming) {
+    return (
+      <button
+        onClick={() => setConfirming(true)}
+        style={{
+          marginTop: '1.25rem',
+          width: '100%',
+          padding: '0.5rem',
+          fontSize: '0.8rem',
+          color: '#6b7280',
+          backgroundColor: 'transparent',
+          border: '1px solid #e5e7eb',
+          borderRadius: '6px',
+          cursor: 'pointer',
+        }}
+      >
+        Release this ticket
+      </button>
+    )
+  }
+
+  return (
+    <div style={{
+      marginTop: '1.25rem',
+      padding: '0.75rem',
+      backgroundColor: '#fef2f2',
+      border: '1px solid #fecaca',
+      borderRadius: '8px',
+    }}>
+      <p style={{ fontSize: '0.8rem', color: '#991b1b', marginBottom: '0.5rem' }}>
+        Release this ticket back to available?
+      </p>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button
+          onClick={handleRelease}
+          disabled={releasing}
+          style={{
+            flex: 1,
+            padding: '0.4rem',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#fff',
+            backgroundColor: '#dc2626',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: releasing ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {releasing ? 'Releasing...' : 'Yes, release'}
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          style={{
+            flex: 1,
+            padding: '0.4rem',
+            fontSize: '0.8rem',
+            color: '#374151',
+            backgroundColor: '#f3f4f6',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }
